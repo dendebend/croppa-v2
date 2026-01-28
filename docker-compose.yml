@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  croppa-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: croppa-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  croppa-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: croppa-web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - croppa-api
+
+networks:
+  default:
+    name: croppa-network
