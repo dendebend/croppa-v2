@@ -4,12 +4,12 @@
 echo "Starting Croppa v2 development environment..."
 
 # Start backend in background
-echo "Starting backend on :8000..."
+echo "Starting backend on :8001..."
 cd backend
 python -m venv venv 2>/dev/null
 source venv/bin/activate
 pip install -r requirements.txt -q
-uvicorn main:app --reload --port 8000 &
+uvicorn main:app --reload --port 8001 &
 BACKEND_PID=$!
 cd ..
 
@@ -27,7 +27,7 @@ trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null" EXIT
 echo ""
 echo "Croppa v2 is running!"
 echo "  Frontend: http://localhost:5173"
-echo "  Backend:  http://localhost:8000"
+echo "  Backend:  http://localhost:8001"
 echo ""
 echo "Press Ctrl+C to stop."
 
