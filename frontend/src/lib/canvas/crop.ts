@@ -58,22 +58,22 @@ export function getCropCoords(settings: CropSettings): CropBox {
 }
 
 /**
- * Apply crop to an image and resize to output size
+ * Apply crop to an image and resize to output size.
+ * Uses step-down resizing to avoid single-pass downscale artifacts.
  */
 export function applyCrop(
   sourceImage: HTMLImageElement,
   cropBox: CropBox,
   outputSize: number
 ): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = outputSize;
-  canvas.height = outputSize;
-
-  const ctx = canvas.getContext('2d')!;
-
   const cropWidth = cropBox.right - cropBox.left;
   const cropHeight = cropBox.bottom - cropBox.top;
 
+  // Step 1: Draw the cropped region at its native size
+  let current = document.createElement('canvas');
+  current.width = cropWidth;
+  current.height = cropHeight;
+  let ctx = current.getContext('2d')!;
   ctx.drawImage(
     sourceImage,
     cropBox.left,
@@ -82,11 +82,36 @@ export function applyCrop(
     cropHeight,
     0,
     0,
-    outputSize,
-    outputSize
+    cropWidth,
+    cropHeight
   );
 
-  return canvas;
+  // Step 2: Progressively halve until within 2x of target
+  while (current.width > outputSize * 2) {
+    const nextW = Math.round(current.width / 2);
+    const nextH = Math.round(current.height / 2);
+
+    const step = document.createElement('canvas');
+    step.width = nextW;
+    step.height = nextH;
+    const stepCtx = step.getContext('2d')!;
+    stepCtx.imageSmoothingEnabled = true;
+    stepCtx.imageSmoothingQuality = 'high';
+    stepCtx.drawImage(current, 0, 0, nextW, nextH);
+
+    current = step;
+  }
+
+  // Step 3: Final resize to exact output size
+  const output = document.createElement('canvas');
+  output.width = outputSize;
+  output.height = outputSize;
+  ctx = output.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(current, 0, 0, outputSize, outputSize);
+
+  return output;
 }
 
 /**

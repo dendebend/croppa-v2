@@ -1,30 +1,34 @@
-version: '3.8'
-
 services:
   croppa-api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     container_name: croppa-api
     restart: unless-stopped
-    ports:
-      - "8001:8001"
+    env_file: .env
+    # No published ports - only reachable from the Docker network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
 
   croppa-web:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     container_name: croppa-web
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "80:80"
+      - "443:443"
+    env_file: .env
     depends_on:
-      - croppa-api
+      croppa-api:
+        condition: service_healthy
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:   # TLS certificate storage
+  caddy_config: # Caddy config cache
 
 networks:
   default:

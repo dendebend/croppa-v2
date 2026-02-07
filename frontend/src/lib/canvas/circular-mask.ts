@@ -1,97 +1,41 @@
 /**
- * Anti-aliased circular mask implementation
- * Uses supersampling + blur for smooth edges
+ * Circular mask with feathered edges
+ * Uses a radial gradient for smooth, anti-aliased falloff
  */
-
-import { CONFIG } from '@/config';
-
-/**
- * Create a circular mask canvas
- */
-function createMaskCanvas(size: number): HTMLCanvasElement {
-  const hiRes = size * CONFIG.SUPERSAMPLE;
-  const canvas = document.createElement('canvas');
-  canvas.width = hiRes;
-  canvas.height = hiRes;
-
-  const ctx = canvas.getContext('2d')!;
-
-  // Draw white circle on transparent background
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  // Slight inset to prevent edge artifacts
-  ctx.arc(hiRes / 2, hiRes / 2, (hiRes - 8) / 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  return canvas;
-}
-
-/**
- * Apply blur to a canvas (simple box blur approximation)
- */
-function applyBlur(canvas: HTMLCanvasElement, radius: number): void {
-  const ctx = canvas.getContext('2d')!;
-
-  // Use CSS filter for blur (well supported in modern browsers)
-  ctx.filter = `blur(${radius}px)`;
-  ctx.drawImage(canvas, 0, 0);
-  ctx.filter = 'none';
-}
-
-/**
- * Downscale canvas with quality
- */
-function downscale(source: HTMLCanvasElement, targetSize: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = targetSize;
-  canvas.height = targetSize;
-
-  const ctx = canvas.getContext('2d')!;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(source, 0, 0, targetSize, targetSize);
-
-  return canvas;
-}
-
-/**
- * Apply gamma correction to mask
- */
-function applyGamma(canvas: HTMLCanvasElement, gamma: number): void {
-  const ctx = canvas.getContext('2d')!;
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    // Use red channel as mask value (grayscale)
-    const val = data[i] / 255;
-    const corrected = Math.round(255 * Math.pow(val, gamma));
-    data[i] = corrected;     // R
-    data[i + 1] = corrected; // G
-    data[i + 2] = corrected; // B
-    // Alpha stays at 255
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-}
 
 /**
  * Create anti-aliased circular mask at given size
+ * The R channel carries the mask value (255 = keep, 0 = discard)
  */
 export function createCircularMask(size: number): HTMLCanvasElement {
-  // Create high-res mask
-  const maskHi = createMaskCanvas(size);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
 
-  // Apply blur at high res
-  applyBlur(maskHi, CONFIG.BLUR_RADIUS);
+  const ctx = canvas.getContext('2d')!;
 
-  // Downscale to target size
-  const mask = downscale(maskHi, size);
+  // Black background = fully masked outside the circle
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, size, size);
 
-  // Apply gamma for better edge falloff
-  applyGamma(mask, CONFIG.GAMMA);
+  const center = size / 2;
+  const radius = (size - 2) / 2; // slight inset to prevent edge clipping
+  const feather = Math.max(1.5, size * 0.015);
 
-  return mask;
+  // Radial gradient: solid white interior, fading to black at the edge
+  const gradient = ctx.createRadialGradient(
+    center, center, Math.max(0, radius - feather),
+    center, center, radius
+  );
+  gradient.addColorStop(0, '#ffffff');
+  gradient.addColorStop(1, '#000000');
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(center, center, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  return canvas;
 }
 
 /**
@@ -102,8 +46,8 @@ export function applyCircularMask(canvas: HTMLCanvasElement): void {
   const size = canvas.width;
   const ctx = canvas.getContext('2d')!;
 
-  // Get the mask
-  const mask = createCircularMask(size);
+  // Get the mask (cached)
+  const mask = getCachedMask(size);
   const maskCtx = mask.getContext('2d')!;
   const maskData = maskCtx.getImageData(0, 0, size, size);
 
@@ -111,7 +55,7 @@ export function applyCircularMask(canvas: HTMLCanvasElement): void {
   const imageData = ctx.getImageData(0, 0, size, size);
   const data = imageData.data;
 
-  // Apply mask to alpha channel
+  // Apply mask to alpha channel using R channel as mask value
   for (let i = 0; i < data.length; i += 4) {
     const maskVal = maskData.data[i]; // R channel of mask
     // Multiply existing alpha by mask value

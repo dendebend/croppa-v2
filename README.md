@@ -1,50 +1,98 @@
-# Croppa
+# Croppa v2
 
 Batch headshot cropper with automatic face detection. Drop images, adjust crops, download.
 
-## Quick Start
+All image processing happens in the browser. The server only returns face coordinates.
 
-### Docker
+## Deploy to Production
+
+### Prerequisites
+
+- Docker and Docker Compose on the host machine
+- A domain with a DNS **A record** pointing to the machine's public IP
+- Ports **80** and **443** open on the machine (for Let's Encrypt + HTTPS)
+
+### 1. Clone and configure
 
 ```bash
-docker-compose up --build
+git clone <repo-url> && cd croppa-v2
+cp .env.example .env
 ```
 
-Open http://localhost:3000
+Edit `.env`:
 
-### Windows (Native)
-
-**Backend:**
-```powershell
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8001
+```env
+DOMAIN=croppa.yourdomain.com
+AUTH_USER=croppa
+AUTH_PASS_HASH=<paste hash here>
 ```
 
-**Frontend** (new terminal):
-```powershell
-cd frontend
-npm install
-npm run dev
+### 2. Generate the password hash
+
+Pick a shared password for the team and generate a bcrypt hash:
+
+```bash
+docker run --rm caddy:2-alpine caddy hash-password --plaintext 'your-password-here'
 ```
 
-Open http://localhost:5173
+Copy the full output (starts with `$2a$`) into `AUTH_PASS_HASH` in your `.env`.
+
+### 3. Launch
+
+```bash
+docker compose up -d --build
+```
+
+Caddy will automatically provision a TLS certificate from Let's Encrypt. Give it a minute on first boot, then visit `https://croppa.yourdomain.com`. You'll be prompted for the username/password.
+
+### Updating
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+TLS certs persist in a Docker volume across rebuilds.
+
+---
+
+## Local Development
+
+No Docker needed for local dev. You'll need **Python 3.10+** and **Node.js 18+**.
 
 ### Linux / macOS / WSL
 
-**Backend:**
 ```bash
+./dev.sh
+```
+
+Or manually:
+
+```bash
+# Terminal 1 - backend
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8001
+
+# Terminal 2 - frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-**Frontend** (new terminal):
-```bash
+### Windows
+
+```powershell
+# Terminal 1 - backend
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+
+# Terminal 2 - frontend
 cd frontend
 npm install
 npm run dev
@@ -52,30 +100,38 @@ npm run dev
 
 Open http://localhost:5173
 
+---
+
 ## Controls
 
 | Input | Action |
 |-------|--------|
-| `←` `→` | Navigate images |
-| Drag | Adjust position |
-| Scroll | Adjust padding |
+| `Arrow Left` / `Arrow Right` | Navigate images |
+| Drag on preview | Adjust crop position |
+| Scroll on preview | Adjust padding / zoom |
 
 ## Architecture
 
 ```
-Browser                              Server
-┌─────────────────────┐              ┌─────────────────────┐
-│  React + Canvas API │◄────────────►│  FastAPI + OpenCV   │
-│  - UI               │  /detect-face│  - Face detection   │
-│  - Image processing │              │                     │
-│  - Downloads        │              │                     │
-└─────────────────────┘              └─────────────────────┘
+Internet
+   │
+   ▼
+┌──────────────────────────────────────┐
+│  Caddy (TLS, Basic Auth, Headers)    │
+├──────────┬───────────────────────────┤
+│ /api/*   │  Static files (SPA)       │
+│    │     │  React + Canvas API       │
+│    ▼     │  - UI & image processing  │
+│ FastAPI  │  - Client-side cropping   │
+│ + OpenCV │  - ZIP downloads          │
+│ (faces)  │                           │
+└──────────┴───────────────────────────┘
 ```
 
-All image processing happens in the browser. The server only returns face coordinates.
+## Configuration Reference
 
-## Requirements
-
-- Python 3.10+
-- Node.js 18+
-- Docker (optional)
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DOMAIN` | Your domain (Caddy auto-provisions TLS) | `croppa.example.com` |
+| `AUTH_USER` | Basic auth username | `croppa` |
+| `AUTH_PASS_HASH` | Bcrypt hash of the password | `$2a$14$...` |

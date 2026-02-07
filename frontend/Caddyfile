@@ -1,0 +1,28 @@
+{$DOMAIN:localhost} {
+	# Basic auth
+	basicauth * {
+		{$AUTH_USER:croppa} {$AUTH_PASS_HASH}
+	}
+
+	# Security headers
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'"
+	}
+
+	# API reverse proxy (handle_path strips the /api prefix)
+	handle_path /api/* {
+		reverse_proxy croppa-api:8001
+	}
+
+	# SPA static file serving
+	handle {
+		root * /srv
+		encode gzip zstd
+		try_files {path} /index.html
+		file_server
+	}
+}
