@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(npx tsc:*)",
+      "Bash(docker compose build:*)",
+      "Bash(docker.exe:*)",
+      "Bash(/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe --version)",
+      "Bash(/mnt/c/ProgramData/DockerDesktop/version-bin/docker.exe --version)",
+      "Bash(cmd.exe /c \"docker --version\")",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 log --oneline -10)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 diff HEAD~1..HEAD --stat)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 show 59dffb6:frontend/src/lib/canvas/crop.ts)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 diff 59dffb6 HEAD -- frontend/src/lib/canvas/crop.ts)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 diff -- frontend/src/lib/canvas/crop.ts)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 diff HEAD -- frontend/src/lib/canvas/crop.ts)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 status)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 diff HEAD -- frontend/src/lib/canvas/circular-mask.ts)",
+      "Bash(git -C /mnt/c/Users/mu/BFhub/croppa-v2 diff HEAD -- backend/main.py)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

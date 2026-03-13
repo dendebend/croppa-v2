@@ -5,11 +5,10 @@ Face detection module using OpenCV Haar Cascade
 import cv2
 import numpy as np
 from typing import Optional
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass
-class FaceCoords:
+class FaceCoords(BaseModel):
     x: int
     y: int
     w: int

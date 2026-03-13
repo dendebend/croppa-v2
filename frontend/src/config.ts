@@ -12,9 +12,9 @@ export const CONFIG = {
   DEFAULT_OUTPUT_SIZE: 300,
 
   // Crop settings
-  DEFAULT_PADDING: 0.3,      // 30% padding around face
+  DEFAULT_PADDING: 0.7,      // 70% padding around face
   MIN_PADDING: 0,
-  MAX_PADDING: 1.0,          // 100% max
+  MAX_PADDING: 3.0,          // 300% max
   PADDING_STEP: 0.01,
 
   // Offset range (relative to face size)
